@@ -12,6 +12,7 @@ namespace CheckPageCount
     {
         static void Main(string[] args)
         {
+            string fileNameResult = "";
 
             try
             {
@@ -25,7 +26,23 @@ namespace CheckPageCount
                     else
                     {
                         Document doc = OpenDoc(args[0]);
-                        FileManager.GetFileNameResult(args[1]);
+                        string[] name = args[1].Split('.');
+
+                        string expansion = $".{name[name.Length - 1]}";
+                        if (expansion == ".txt")
+                        {
+                            fileNameResult = args[1];
+                        }
+                        else
+                        {
+                            fileNameResult = $"{args[1]}.txt";
+                        }
+                        if (!File.Exists(fileNameResult))
+                        {
+                            File.Create(fileNameResult);
+                        }
+                        WriteFile($"Проверяемый файл {args[0]}, выходной файл {args[1]}", fileNameResult);
+
                         int count = ListCount(doc);
                         string allCount = FindAllPagesInStartPage(doc);
                         Console.WriteLine(count);
@@ -48,15 +65,16 @@ namespace CheckPageCount
 
                             if (count != page)
                             {
-                                FileManager.WriteFile($"Количество страниц не совпадает! Посчитано: {count}, на странице реферата: {page}");
+                                WriteFile($"Количество страниц не совпадает! Посчитано: {count}, на странице реферата: {page}", fileNameResult);
                                 Console.WriteLine($"Количество страниц не совпадает! Посчитано: {count}, на странице реферата: {page}");
                             }
                         }
                         else
                         {
-                            FileManager.WriteFile("Нет количества страниц на странице реферата!");
+                            WriteFile("Нет количества страниц на странице реферата!", fileNameResult);
                             Console.WriteLine("Нет количества страниц на странице реферата!");
                         }
+                        
                         Console.ReadKey();
 
                     }
@@ -65,8 +83,24 @@ namespace CheckPageCount
                 {
                     Console.WriteLine("Не заданы файлы. Проверьте наличие строго 2 файлов в bat файле");
                     Console.ReadKey();
-                    //Document doc = OpenDoc("1.docx");
-                    //FileManager.GetFileNameResult("1");
+                    //Document doc = OpenDoc("3.docx");
+                    //string[] name = "1".Split('.');
+
+                    //string expansion = $".{name[name.Length - 1]}";
+                    //if (expansion == ".txt")
+                    //{
+                    //    fileNameResult = "1";
+                    //}
+                    //else
+                    //{
+                    //    fileNameResult = $"1.txt";
+                    //}
+                    //if (!File.Exists(fileNameResult))
+                    //{
+                    //    File.Create(fileNameResult);
+                    //}
+                    //WriteFile($"Проверяемый файл 3.docx, выходной файл 1.txt", fileNameResult);
+
                     //int count = ListCount(doc);
                     //string allCount = FindAllPagesInStartPage(doc);
                     //Console.WriteLine(count);
@@ -89,15 +123,20 @@ namespace CheckPageCount
 
                     //    if (count != page)
                     //    {
-                    //        FileManager.WriteFile($"Количество страниц не совпадает! Посчитано: {count}, на странице реферата: {page}");
+                    //        WriteFile($"Количество страниц не совпадает! Посчитано: {count}, на странице реферата: {page}", fileNameResult);
                     //        Console.WriteLine($"Количество страниц не совпадает! Посчитано: {count}, на странице реферата: {page}");
+                    //    }
+                    //    else
+                    //    {
+                    //        WriteFile("Проверка прошла успешно!", fileNameResult);
                     //    }
                     //}
                     //else
                     //{
-                    //    FileManager.WriteFile("Нет количества страниц на странице реферата!");
+                    //    WriteFile("Нет количества страниц на странице реферата!", fileNameResult);
                     //    Console.WriteLine("Нет количества страниц на странице реферата!");
                     //}
+
                     //Console.ReadKey();
                 }
             }
@@ -117,7 +156,8 @@ namespace CheckPageCount
                 }
                 else
                 {
-                    FileManager.WriteFile("Файла не существует");
+
+                    WriteFile("Файла не существует", fileNameResult);
                     Console.WriteLine("Файла не существует");
                     Console.ReadKey();
                     return null;
@@ -130,23 +170,16 @@ namespace CheckPageCount
                 {
                     doc.SaveToFile("ToPDF.pdf", Spire.Doc.FileFormat.PDF);
                     PdfDocument pd = new PdfDocument("ToPDF.pdf");
-                    int pageStart = FindDocPart(pd, "Введение");
+                    int pageStart = FindDocPart(pd, "Реферат");
                     if (pageStart == 0)
                     {
-                        pageStart = FindDocPart(pd, "ВВЕДЕНИЕ");
-                        if (pageStart == 0)
-                        {
-                            pageStart = FindDocPart(pd, "введение");
-                        }
-                        if (pageStart == 0)
-                        {
-                            FileManager.WriteFile("Не обнаружено введение в содержании.");
-                            Console.WriteLine("Не обнаружено введение в содержании.");
-                            return 0;
-                        }
+
+                        WriteFile("Не обнаружено реферата.", fileNameResult);
+                        Console.WriteLine("Не обнаружено реферата.");
+                        return 0;
                     }
                     int pageStop = doc.PageCount;
-                    return pageStop - pageStart;
+                    return pageStop+1 - (pageStart-2); //Включается сама старница реферата (по ворду она 4, на деле 3 поэтому -2) +1 - включается сама паследняя страница
                 }
                 else
                 {
@@ -162,24 +195,12 @@ namespace CheckPageCount
                     PdfTextFind[] result = null;
                     foreach (PdfPageBase pageItem in doc.Pages)
                     {
-                        result = pageItem.FindText(part, TextFindParameter.None).Finds;
-                        string b = string.Empty;
-                        if (result != null && result.Length > 0)
+                        result = pageItem.FindText(part, TextFindParameter.IgnoreCase).Finds;
+                        foreach (PdfTextFind find in result)
                         {
-                            for (int i = 0; i < result[0].LineText.Length; i++)
-                            {
-                                if (Char.IsDigit(result[0].LineText[i]))
-                                    b += result[0].LineText[i];
-                            }
-
-                            if (b.Length > 0)
-                                page = int.Parse(b);
-                            if (result[0].LineText.Length > 0)
-                            {
-                                break;
-                            }
+                            //get the page number of the text
+                            page = find.SearchPageIndex + 1;
                         }
-
                     }
                     return page;
                 }
@@ -197,7 +218,14 @@ namespace CheckPageCount
             }
         }
 
+        static public void WriteFile(string text,string fileNameResult)
+        {
+            using (StreamWriter writer = new StreamWriter(fileNameResult, true, System.Text.Encoding.Default))
+            {
+                writer.WriteLine(text);
+            }
 
+        }
 
     }
 }
