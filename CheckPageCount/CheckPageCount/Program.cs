@@ -37,10 +37,7 @@ namespace CheckPageCount
                         {
                             fileNameResult = $"{args[1]}.txt";
                         }
-                        if (!File.Exists(fileNameResult))
-                        {
-                            File.Create(fileNameResult);
-                        }
+                       
                         WriteFile($"Проверяемый файл {args[0]}, выходной файл {args[1]}", fileNameResult);
 
                         int count = ListCount(doc);
@@ -95,10 +92,7 @@ namespace CheckPageCount
                     //{
                     //    fileNameResult = $"1.txt";
                     //}
-                    //if (!File.Exists(fileNameResult))
-                    //{
-                    //    File.Create(fileNameResult);
-                    //}
+                    
                     //WriteFile($"Проверяемый файл 3.docx, выходной файл 1.txt", fileNameResult);
 
                     //int count = ListCount(doc);
